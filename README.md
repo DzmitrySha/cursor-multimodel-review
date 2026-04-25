@@ -168,6 +168,25 @@ model: inherit
 
 Then select the desired model in the parent Cursor chat and invoke `inherit-critic`.
 
+## Reasoning Effort And Max Mode
+
+This plugin does not set a separate `reasoning_effort`, `max_tokens`, or `context_length` value in agent frontmatter because Cursor's documented subagent configuration only exposes `model`, `readonly`, and `is_background` for this purpose.
+
+By default, each critic prompt instructs the model to use the maximum available reasoning effort, output budget, and context window. The actual limits are controlled by Cursor, the selected model, your plan, team policy, region, and whether Max Mode is enabled.
+
+For maximum-depth reviews:
+
+- Turn on Cursor Max Mode before invoking the skill or agents.
+- Prefer the highest-effort / thinking variant exposed by your Cursor model picker.
+- Keep `inherit-critic` available when you want the critic to inherit the exact parent model and Max Mode state.
+- Do not add undocumented YAML fields such as `reasoning_effort`, `context_length`, or `max_tokens` unless Cursor documents them for subagents in your installed version.
+
+Model-specific notes:
+
+- `claude-opus-4-7` supports up to 1M context in Max Mode and Cursor recommends its high thinking variant for the strongest results. This package requests `claude-opus-4-7` and prompts it to use the highest available thinking/effort setting, but Cursor does not currently document a separate subagent frontmatter field for that effort setting.
+- `gpt-5-5` requires Max Mode on request-based plans and supports long context through Max Mode. This package requests `gpt-5-5` and prompts for maximum available reasoning effort.
+- `gemini-3-1-pro` supports up to 1M context in Max Mode. This package requests `gemini-3-1-pro` and prompts for maximum available context.
+
 To customize a critic model, edit only the `model:` line at the top of the relevant file in `agents/`. Keep the rest of the frontmatter and prompt body in sync with the package, otherwise the deep-review default will drift. Example:
 
 ```yaml

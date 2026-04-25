@@ -28,6 +28,8 @@ Apply this skill when the user asks things like:
 This skill always runs a deep, full-context adversarial review. There is no light mode. Always:
 
 - Use the full available context budget. Do not optimize for token savings, speed, or brevity.
+- Use the maximum available reasoning effort, thinking depth, output budget, and context window that the current Cursor model/runtime makes available.
+- If Max Mode is enabled, assume the review should use the model's maximum supported context window. If you cannot verify Max Mode, model effort, or context limits from the environment, state that as a confidence limitation.
 - Inspect the complete relevant diff, not only the implementation summary.
 - Read complete relevant files instead of small snippets, especially prompts, rules, configs, schemas, migrations, and shared interfaces.
 - Search for all readers, writers, and callers when a shared file, public API, data format, tool, prompt, or config changes.

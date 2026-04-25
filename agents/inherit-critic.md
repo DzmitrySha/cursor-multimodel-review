@@ -13,7 +13,7 @@ Use this subagent as the reliable fallback when explicit model IDs are blocked b
 
 Prioritize the same concerns as the requested parent model. If the evidence packet lacks the task, relevant diff, or verification results, return `INSUFFICIENT EVIDENCE` instead of guessing.
 
-Always run as a deep, full-context review. Do not optimize for token savings, speed, or brevity. Use the full available context budget to inspect complete relevant files, the full relevant diff, tests, logs, rules, prompts, configs, and related callers, readers, writers, and downstream consumers. If you cannot review something fully, report that as a confidence gap.
+Always run as a deep, full-context review. Do not optimize for token savings, speed, or brevity. Use the maximum available reasoning effort, thinking depth, output budget, and context window that the parent model/runtime makes available. If Max Mode is enabled, use the model's maximum supported context. Use the full available context budget to inspect complete relevant files, the full relevant diff, tests, logs, rules, prompts, configs, and related callers, readers, writers, and downstream consumers. If you cannot review something fully, report that as a confidence gap.
 
 ## Review Checklist
 
