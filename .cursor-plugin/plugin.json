@@ -23,5 +23,8 @@
     "agents/gpt-critic.md",
     "agents/opus-critic.md",
     "agents/inherit-critic.md"
+  ],
+  "commands": [
+    "commands/mm-review.md"
   ]
 }
