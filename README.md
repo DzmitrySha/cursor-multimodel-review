@@ -90,20 +90,3 @@ Cursor may fall back if a model is unavailable on your plan, region, team policy
 Cursor's documented subagent frontmatter does **not** include separate `reasoning_effort`, `max_tokens`, or `context_length` fields. This plugin asks critics to use the maximum available effort/context in their prompts. For the biggest context window, turn on **Max Mode** in Cursor before running the review.
 
 Use `inherit-critic` when you want the critic to inherit the exact parent model and Max Mode state.
-
-## Known Limitations
-
-- This uses more tokens and takes longer than normal review.
-- Subagents start with clean context. Give them the task, diff, files, logs, and constraints.
-- Exact model IDs can change or be unavailable. Keep `inherit-critic` as the stable fallback.
-- Static review cannot prove deployment safety. If runtime was not restarted or logs are stale, require a runtime check.
-
-## Marketplace
-
-Yes, this can be submitted to the Cursor Marketplace.
-
-Cursor says marketplace plugins are reviewed manually and must be open source. Submit here:
-
-https://cursor.com/marketplace/publish
-
-This repository is already public, so the next step is a manual submission.
