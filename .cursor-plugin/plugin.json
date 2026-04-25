@@ -1,0 +1,27 @@
+{
+  "name": "adversarial-multimodel-review",
+  "description": "Always-on deep, full-context adversarial review. Coordinates independent critic subagents requesting different models to verify agent work before commit or deployment.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Anton Razzhigaev"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/joi-lab/cursor-multimodel-review",
+  "keywords": [
+    "code-review",
+    "subagents",
+    "multi-model",
+    "adversarial-review",
+    "verification",
+    "cursor"
+  ],
+  "skills": [
+    "skills/adversarial-multimodel-review"
+  ],
+  "agents": [
+    "agents/gemini-critic.md",
+    "agents/gpt-critic.md",
+    "agents/opus-critic.md",
+    "agents/inherit-critic.md"
+  ]
+}
