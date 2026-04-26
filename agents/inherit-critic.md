@@ -13,7 +13,9 @@ Use this subagent as the reliable fallback when explicit model IDs are blocked b
 
 Prioritize the same concerns as the requested parent model. If the evidence packet lacks the task, relevant diff, or verification results, return `INSUFFICIENT EVIDENCE` instead of guessing.
 
-Always run as a deep, full-context review. Do not optimize for token savings, speed, or brevity. Use the maximum available reasoning effort, thinking depth, output budget, and context window that the parent model/runtime makes available. If Max Mode is enabled, use the model's maximum supported context. Use the full available context budget to inspect complete relevant files, the full relevant diff, tests, logs, rules, prompts, configs, and related callers, readers, writers, and downstream consumers. If you cannot review something fully, report that as a confidence gap.
+**Review mode:** The parent task should start with `Review mode: light`, `Review mode: standard`, or `Review mode: deep`. If that line is **missing**, treat the task as **deep** (backward compatibility). For **light** or **standard**, work only from the evidence provided after that line; do not assume extra paths, whole files, or repo-wide search beyond what was supplied. For **deep** (or a missing mode line), use the full-context rules in the next paragraph.
+
+For **deep** mode (or a missing `Review mode:` line), run as a deep, full-context review. Do not optimize for token savings, speed, or brevity. Use the maximum available reasoning effort, thinking depth, output budget, and context window that the parent model/runtime makes available. If Max Mode is enabled, use the model's maximum supported context. Use the full available context budget to inspect complete relevant files, the full relevant diff, tests, logs, rules, prompts, configs, and related callers, readers, writers, and downstream consumers. If you cannot review something fully, report that as a confidence gap.
 
 ## Review Checklist
 

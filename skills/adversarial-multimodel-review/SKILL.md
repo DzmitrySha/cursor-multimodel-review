@@ -1,6 +1,6 @@
 ---
 name: adversarial-multimodel-review
-description: Runs a deep, full-context adversarial multi-model review of previous agent work. Always optimizes for correctness over speed, cost, and brevity. Use when the user wants independent verification before commit, merge, or deployment, when checking for bugs, regressions, or scope creep, or when getting Gemini, GPT, or Opus critic opinions.
+description: Adversarial multi-model review with modes — standard (default, bounded evidence), light (fast, single inherit critic), or deep (full context). Use before commit, merge, or deployment when the user wants independent verification, bug checks, or Gemini/GPT/Opus critic opinions.
 license: MIT
 ---
 
@@ -10,83 +10,107 @@ Use this skill after an AI agent has planned or implemented work and the user wa
 
 The goal is not to generate more opinions. The goal is to reconstruct the real task, inspect the actual code and evidence, find disagreements, and decide what must happen next.
 
-This skill is intentionally expensive by default. Independent critics matter most for high-stakes work, so this workflow always optimizes for correctness over speed, cost, and brevity.
+**Precedence:** If anything below conflicts with older community phrasing about "always full context" or "no light mode", this document wins for the **selected review mode**.
 
-## Trigger Phrases
+## Review modes
+
+Choose **exactly one** mode per invocation.
+
+### How to select the mode
+
+1. If the user explicitly asks for **light** / **лёгкий** / **быстрый** / `light review` / `quick review` → **light**.
+2. If they ask for **deep** / **глубокий** / **полный контекст** / `deep review` / `max review` / `full context` → **deep**.
+3. If they ask for **standard** / **стандартный** / `standard review` → **standard**.
+4. Otherwise → **standard** (default).
+
+State the chosen mode once in the user-visible summary (for example: "Using **standard** mode.").
+
+### standard (default)
+
+- **Goal:** High-signal adversarial review with controlled cost.
+- **Critics:** Launch `gemini-critic`, `gpt-critic`, and `opus-critic` in parallel when available. Use `inherit-critic` instead of unavailable named critics (same evidence packet for all).
+- **Evidence packet (hard limits):**
+  - Start from the **current diff** and **only files touched** by that diff.
+  - Add **at most one hop** of callers or readers for symbols changed in public APIs, configs, schemas, shared types, or persistence boundaries (stop at the first convincing layer; no repo-wide search).
+  - **Full-file reads** in the packet: at most **5** files, prioritized by risk (auth, data, concurrency, migrations, prompts, security-sensitive config). Everything else: **excerpts with path and line range** (cap **~120 lines** per excerpt unless the user chose deep).
+  - Conversation / task recap for the packet: **≤ ~800 tokens** unless deep; include user goal, constraints, and implementation summary—omit unrelated chat.
+- **Quality bar:** Same verdict taxonomy and skepticism toward summaries. Use `INSUFFICIENT EVIDENCE` when the packet cannot support a reliable claim. Do not broaden into unrelated code or expose secrets.
+
+### light
+
+- **Goal:** Fast gate; cheapest useful check before deeper work.
+- **Critics:** Run **only** `inherit-critic` unless the user names one other critic.
+- **Evidence packet:** The diff (or patch), optional **≤ 2** supporting excerpts with line ranges, one test or lint command plus **≤ 120 lines** of output, and a short bullet list of **assumptions**. No multi-hop tracing unless the user expands scope.
+- **Limitation:** Say explicitly that cross-module and architectural risks may be under-covered compared to standard or deep.
+
+### deep
+
+- **Goal:** Maximum assurance for high-stakes changes (releases, security, large refactors).
+- **Critics:** Launch `gemini-critic`, `gpt-critic`, and `opus-critic` in parallel when available; use `inherit-critic` as fallback when model IDs are unavailable.
+- **Evidence packet:** Spend the review budget. Use the full available context budget, maximum reasoning effort, output budget, and context window the Cursor runtime allows. If Max Mode is enabled, assume the review should use the model's maximum supported context window; if you cannot verify Max Mode, state that as a confidence limitation.
+- Inspect the **complete relevant diff**, not only the implementation summary. Read **complete relevant files** where justified (prompts, rules, configs, schemas, migrations, shared interfaces). Search for readers, writers, and callers when shared surfaces change. Include test output, runtime logs, deployment state, and stale-evidence caveats with timestamps. Reconstruct full task context including follow-ups and project rules. Do not stop at the first issue. If evidence is too large or inaccessible, say exactly what could not be reviewed.
+
+## Trigger phrases
 
 Apply this skill when the user asks things like:
 
-- "Review the previous agent's work."
-- "Can we commit this?"
-- "Can we deploy this?"
-- "Run a multimodel review."
+- "Review the previous agent's work." (optionally with light / standard / deep.)
+- "Can we commit this?" / "Can we deploy this?"
+- "Run a multimodel review." / "multimodel review"
 - "Check for bugs, regressions, or scope creep."
 - "Get Gemini/GPT/Opus to review this independently."
-
-## Default Review Behavior
-
-This skill always runs a deep, full-context adversarial review. There is no light mode. Always:
-
-- Use the full available context budget. Do not optimize for token savings, speed, or brevity.
-- Use the maximum available reasoning effort, thinking depth, output budget, and context window that the current Cursor model/runtime makes available.
-- If Max Mode is enabled, assume the review should use the model's maximum supported context window. If you cannot verify Max Mode, model effort, or context limits from the environment, state that as a confidence limitation.
-- Inspect the complete relevant diff, not only the implementation summary.
-- Read complete relevant files instead of small snippets, especially prompts, rules, configs, schemas, migrations, and shared interfaces.
-- Search for all readers, writers, and callers when a shared file, public API, data format, tool, prompt, or config changes.
-- Review test output, runtime logs, deployment state, and known stale evidence with timestamps.
-- Reconstruct the full task context: original request, follow-up corrections, plan, implementation summary, conversation history, and project rules.
-- Do not stop at the first issue. Build the most complete picture possible before giving a verdict.
-- Do not broaden into unrelated code or expose secrets. Deep review means complete relevant evidence, not random repository traversal.
-- If evidence is too large or inaccessible, say exactly what could not be reviewed and how that limits confidence.
-- In short: spend the review budget. The user opted into this workflow because missing a bug costs more than extra tokens.
+- Russian: «проверь работу агента», «мультимодельное ревью», «лёгкий/стандартный/глубокий обзор».
 
 ## Workflow
 
-1. Reconstruct the assignment:
+1. **Select the review mode** using the rules above. Announce it briefly.
+
+2. Reconstruct the assignment (scope to the mode):
    - User request and later corrections.
    - Agent plan and implementation summary.
-   - Current diff, staged changes, relevant files, tests, logs, docs, rules, and runtime state.
-   - Any explicit caveats such as stale logs or runtime not restarted.
+   - Current diff, staged changes, relevant files, tests, logs, docs, rules, and runtime state — **only as permitted by the mode's evidence limits**.
+   - Any explicit caveats (stale logs, runtime not restarted).
 
-2. Build an evidence packet before launching critics. Include:
+3. **Build an evidence packet** before launching critics. Always include where applicable:
    - Original request and later corrections.
-   - Acceptance criteria or the expected behavior.
+   - Acceptance criteria or expected behavior.
    - Implementation summary from the previous agent.
-   - Current `git status`, diff summary, and relevant diff excerpts.
-   - Key files and why they matter.
-   - Test commands and exact results, including skipped or failed checks.
-   - Runtime/log evidence with timestamps.
-   - Known caveats such as stale logs, runtime not restarted, missing credentials, or unavailable commands.
-   - Target decision: commit, merge, deploy, or continue implementation.
+   - Current `git status`, diff summary, and diff content (full for light/standard if small; for deep follow deep rules).
+   - Key files and why they matter (respect standard/light caps).
+   - Test commands and results (respect line caps in light).
+   - Runtime/log evidence with timestamps when provided.
+   - Known caveats and target decision (commit, merge, deploy, continue).
 
-3. Launch critic subagents in parallel when available:
-   - `gemini-critic` for broad-context alternative reasoning.
-   - `gpt-critic` for rigorous implementation and regression review.
-   - `opus-critic` for deep architectural and intent review.
-   - `inherit-critic` when exact model IDs are unavailable or the user has selected a specific parent model.
+4. **Launch critic subagents** (see mode):
+   - **light:** only `inherit-critic`.
+   - **standard** or **deep:** `gemini-critic`, `gpt-critic`, `opus-critic` in parallel when available; substitute `inherit-critic` for any unavailable named critic.
 
-4. Give each critic the same evidence packet:
+5. **First line of every critic task** (required):  
+   `Review mode: light` | `Review mode: standard` | `Review mode: deep`  
+   Then paste the same evidence packet for each critic in that invocation.
+
+6. Give each critic:
    - Original task and constraints.
    - What the previous agent claims changed.
-   - Files, diffs, logs, tests, and docs to inspect.
-   - Known limitations, for example "runtime has not been restarted" or "logs may be stale."
+   - Files, diffs, logs, tests, and docs **included in the packet** (do not ask critics to pull paths not supplied in standard/light).
+   - Known limitations.
    - A request to verify from source, not from summaries.
    - A requirement to return `INSUFFICIENT EVIDENCE` instead of guessing when task, diff, or test evidence is missing.
 
-5. Synthesize the reviews:
+7. Synthesize the reviews:
    - Treat every critic finding as untrusted until checked against code or logs.
    - Merge duplicate findings.
    - Highlight disagreements and decide which side has better evidence.
    - Separate blockers from nice-to-have improvements.
 
-6. Return a final readiness decision:
+8. Return a final readiness decision:
    - `BLOCK`: serious correctness, data, security, or deploy risk.
    - `FIX FIRST`: likely safe after targeted fixes.
    - `SAFE TO COMMIT`: code is ready to commit, with any minor caveats.
    - `SAFE TO DEPLOY AFTER RUNTIME CHECK`: code can be committed, but deployment needs restart, smoke test, or live verification.
    - `INSUFFICIENT EVIDENCE`: the reviewer lacked enough task, diff, test, or runtime evidence to make a reliable call.
 
-## Critic Checklist
+## Critic checklist
 
 Each critic must answer:
 
@@ -100,7 +124,7 @@ Each critic must answer:
 - Did the implementation add unnecessary abstraction, scope creep, compatibility shims, or unrelated churn?
 - What must be fixed before commit, merge, or deploy?
 
-## Output Format
+## Output format
 
 Use this structure:
 
@@ -122,19 +146,19 @@ A short verdict summary explaining the decision. The detail belongs in Findings 
 
 If there are no findings, write: "No confirmed findings." Then list residual verification gaps.
 
-## Model Disagreements
+## Model disagreements
 - What the critics disagreed about and which interpretation is best supported.
 
-## Checks Performed
+## Checks performed
 - Code/diff inspected.
 - Tests or commands considered.
 - Logs/runtime evidence considered.
 
-## Follow-Up Prompt
+## Follow-up prompt
 Copy-paste prompt for the implementation agent to fix or verify the accepted findings.
 ```
 
-## Follow-Up Prompt Template
+## Follow-up prompt template
 
 Use this when handing review output back to the implementation agent:
 
@@ -142,7 +166,7 @@ Use this when handing review output back to the implementation agent:
 Here is an independent adversarial review of your previous work. Do not assume it is correct. Re-open the code, diff, tests, logs, and user requirements. Verify each finding against the actual project state. Fix only the findings you can confirm. If a finding is wrong, explain why with evidence. If there are multiple reasonable fixes, ask before changing behavior.
 ```
 
-## Rules of Engagement
+## Rules of engagement
 
 - Prefer evidence over confidence.
 - `SAFE TO COMMIT` requires at minimum the task, relevant diff, and either relevant test results or a clear reason tests are unnecessary.
