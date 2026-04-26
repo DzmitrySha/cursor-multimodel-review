@@ -1,8 +1,16 @@
 # Cursor Multimodel Review
 
-Deep adversarial review for Cursor. One agent implements; several read-only critic agents review the work from scratch before you commit, merge, or deploy.
+Adversarial review for Cursor. One agent implements; read-only critic subagents review the work before you commit, merge, or deploy.
 
-This plugin is intentionally expensive by default. It tells critics to use the full available context, read complete relevant files, inspect the full diff, check tests/logs/docs/rules/runtime state, and avoid saving tokens when review quality is at stake.
+The skill supports three **review modes**:
+
+| Mode | Default? | Critics | Cost (typical) |
+|------|----------|---------|----------------|
+| **standard** | yes | `gemini-critic`, `gpt-critic`, `opus-critic` in parallel | Bounded evidence packet (diff-first, caps on full files and excerpts) |
+| **light** | no | `inherit-critic` only | Minimal packet (diff + short logs/tests) |
+| **deep** | no | Same three critics as standard | Full context policy (use **Max Mode** in Cursor for the largest windows) |
+
+If the user does not name a mode, the skill uses **standard**.
 
 ## Install: Paste This Into Cursor
 
@@ -37,16 +45,24 @@ Confirm `adversarial-multimodel-review` appears. If it does not, the plugin did 
 
 ## Run A Review
 
-Primary option:
+Examples (pick one):
 
 ```text
-Use the adversarial-multimodel-review skill to review the previous agent's work. Use the full available context.
+Use the adversarial-multimodel-review skill to review the previous agent's work. (standard mode — default)
+```
+
+```text
+Use the adversarial-multimodel-review skill, light mode, to quickly review the previous agent's work.
+```
+
+```text
+Use the adversarial-multimodel-review skill, deep / full context, to review the previous agent's work before release.
 ```
 
 Slash shortcuts:
 
-- `/mm-review` — command shortcut included in this plugin.
-- `/adversarial-multimodel-review` — skill slash form in Cursor 2.4+. If it does not appear, use `/mm-review` or the skill phrase above.
+- `/mm-review` — routes **light** / **deep** / **standard** from your wording; default is standard.
+- `/adversarial-multimodel-review` — skill slash form in Cursor 2.4+. If it does not appear, use `/mm-review` or the skill phrases above.
 
 ## Manual Install
 
@@ -99,13 +115,13 @@ model: claude-opus-4-7
 
 Cursor may fall back if a model is unavailable on your plan, region, team policy, or Max Mode settings.
 
-Cursor's documented subagent frontmatter does **not** include separate `reasoning_effort`, `max_tokens`, or `context_length` fields. This plugin asks critics to use the maximum available effort/context in their prompts. For the biggest context window, turn on **Max Mode** in Cursor before running the review.
+Cursor's documented subagent frontmatter does **not** include separate `reasoning_effort`, `max_tokens`, or `context_length` fields. In **deep** mode, critics are instructed to use the maximum available effort and context. For the largest windows, turn on **Max Mode** in Cursor before a deep review. **Standard** and **light** rely on a bounded evidence packet from the parent agent to save tokens.
 
-Use `inherit-critic` when you want the critic to inherit the exact parent model and Max Mode state.
+Use `inherit-critic` when you want the critic to inherit the exact parent model and Max Mode state (required for **light** mode).
 
 ## Known Limitations
 
-- This uses more tokens and takes longer than normal review.
+- **Deep** mode uses more tokens and time than a normal review; **standard** and **light** are lighter by design.
 - Subagents start with clean context. Give them the task, diff, files, logs, and constraints.
 - Exact model IDs can change or be unavailable. Keep `inherit-critic` as the stable fallback.
 - The skill slash form `/adversarial-multimodel-review` depends on Cursor 2.4+ skill discovery. Use `/mm-review` if the skill slash entry is not visible.
