@@ -1,9 +1,9 @@
 {
   "name": "adversarial-multimodel-review",
-  "description": "Always-on deep, full-context adversarial review. Coordinates independent critic subagents requesting different models to verify agent work before commit or deployment.",
-  "version": "0.1.0",
+  "description": "Adversarial multi-model code review: standard (default, bounded evidence), light (single inherit critic), or deep (full context). Read-only critic subagents.",
+  "version": "0.2.0",
   "author": {
-    "name": "Anton Razzhigaev"
+    "name": "Anton Razzhigaev feat. Dzmitry Shapavalau"
   },
   "license": "MIT",
   "repository": "https://github.com/joi-lab/cursor-multimodel-review",
