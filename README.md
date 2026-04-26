@@ -2,6 +2,8 @@
 
 Adversarial review for Cursor. One agent implements; read-only critic subagents review the work before you commit, merge, or deploy.
 
+This repository is a maintained fork of `joi-lab/cursor-multimodel-review` with additional improvements.
+
 The skill supports three **review modes**:
 
 | Mode | Default? | Critics | Cost (typical) |
@@ -19,7 +21,7 @@ Open a Cursor chat in any project and paste:
 ```text
 Install this Cursor plugin locally and do nothing else:
 
-https://github.com/joi-lab/cursor-multimodel-review
+https://github.com/DzmitrySha/cursor-multimodel-review
 
 Steps:
 1. Clone or pull the repo into ~/.cursor/plugins/local/adversarial-multimodel-review.
